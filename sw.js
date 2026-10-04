@@ -1,5 +1,5 @@
 // Keeps the app working offline. Recipes themselves live in the phone's storage, not here.
-const CACHE = 'recipes-v3';
+const CACHE = 'recipes-v1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Everything else (icons, fonts, recipe photos, the photo and PDF readers): cache first, refresh in the background.
+  // Everything else (icons, fonts, recipe photos): cache first, refresh in the background.
   e.respondWith(
     caches.match(req).then((hit) => {
       const net = fetch(req).then((res) => {
