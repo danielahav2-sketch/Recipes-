@@ -1,5 +1,5 @@
 // Keeps the app working offline. Recipes themselves live in the phone's storage, not here.
-const CACHE = 'recipes-v5';
+const CACHE = 'recipes-v6';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
