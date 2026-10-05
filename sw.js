@@ -1,9 +1,9 @@
 // Keeps the app working offline. Recipes themselves live in the phone's storage, not here.
-const CACHE = 'recipes-v4';
+const CACHE = 'recipes-v5';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -25,7 +25,7 @@ self.addEventListener('fetch', (e) => {
   // App pages: network first so updates arrive, cache when offline.
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'no-store' })
         .then((res) => { caches.open(CACHE).then((c) => c.put('./index.html', res.clone())); return res; })
         .catch(() => caches.match('./index.html'))
     );

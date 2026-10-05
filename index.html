@@ -169,6 +169,10 @@ textarea.in{min-height:140px;resize:vertical;line-height:1.6}
 textarea#f-steps{min-height:220px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .img-prev{position:relative;margin-top:16px}
+.img-pick{margin-top:10px}
+.img-pick .btn{flex:1}
+.wa{background:#25D366;border-color:#25D366;color:#fff}
+.app-ver{margin-top:22px;text-align:center;color:var(--muted);font-size:.85rem}
 .img-prev img{width:100%;max-height:220px;object-fit:cover;border-radius:var(--r);display:block}
 .img-prev button{position:absolute;top:8px;inset-inline-start:8px;height:34px;padding:0 12px;border-radius:17px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:.9rem}
 .save-bar{position:sticky;bottom:0;background:var(--bg);padding:12px 0 calc(12px + env(safe-area-inset-bottom));margin-top:20px;display:flex;gap:10px;border-top:1px solid var(--line)}
@@ -368,6 +372,12 @@ textarea#f-steps{min-height:220px}
       <img id="img-el" alt="">
       <button type="button" id="img-remove">הסרת תמונה</button>
     </div>
+    <div class="btns img-pick">
+      <button type="button" class="btn" id="img-choose">🖼️ <span id="img-choose-t">הוספת תמונה</span></button>
+      <button type="button" class="btn" id="img-shoot">📷 צילום</button>
+    </div>
+    <input type="file" id="img-file" accept="image/*" hidden>
+    <input type="file" id="img-cam" accept="image/*" capture="environment" hidden>
     <div class="field">
       <label for="f-ing">רכיבים <span class="hint">· רכיב בכל שורה. שורה שמסתיימת בנקודתיים (למשל "לבצק:") תהפוך לכותרת</span></label>
       <textarea class="in" id="f-ing"></textarea>
@@ -422,6 +432,7 @@ textarea#f-steps{min-height:220px}
       <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>
   </div>
+  <p class="app-ver">גרסה 5 · תיקיות צבעוניות</p>
 </section>
 
 <!-- ============ SHOPPING LIST ============ -->
@@ -441,6 +452,7 @@ textarea#f-steps{min-height:220px}
   </form>
   <div id="shop-list"></div>
   <div class="btns" id="shop-actions" style="margin-top:18px">
+    <button class="btn wa" id="shop-wa">שליחה בוואטסאפ</button>
     <button class="btn" id="shop-clear-done">מחיקת מה שסומן</button>
     <button class="btn danger" id="shop-clear-all">ניקוי כל הרשימה</button>
   </div>
@@ -744,13 +756,13 @@ function renderShop() {
   }).join('') : `<div class="empty"><h2>הרשימה ריקה</h2><p>פותחים מתכון ולוחצים על "הוספה לרשימת הקניות", או כותבים פריט בשדה למעלה.</p></div>`;
   $('#shop-actions').hidden = !shop.length;
   $('#shop-clear-done').hidden = !shop.some((i) => i.done);
-  $('#shop-share').hidden = !shop.some((i) => !i.done);
+  $('#shop-share').hidden = $('#shop-wa').hidden = !shop.some((i) => !i.done);
 }
 $('#shop-list').addEventListener('change', (e) => {
   const it = shop.find((i) => i.id === e.target.dataset.id); if (!it) return;
   it.done = e.target.checked; saveShop();
   $('#shop-clear-done').hidden = !shop.some((i) => i.done);
-  $('#shop-share').hidden = !shop.some((i) => !i.done);
+  $('#shop-share').hidden = $('#shop-wa').hidden = !shop.some((i) => !i.done);
 });
 $('#shop-list').addEventListener('click', (e) => {
   const rm = e.target.closest('[data-rm]'), open = e.target.closest('[data-open]');
@@ -768,10 +780,9 @@ $('#shop-clear-all').addEventListener('click', async () => {
   if (!await ask('למחוק את כל רשימת הקניות?', { ok: 'מחיקה', danger: true })) return;
   shop = []; saveShop(); renderShop();
 });
-$('#shop-share').addEventListener('click', async () => {
-  const text = 'רשימת קניות:\n' + shop.filter((i) => !i.done).map((i) => '• ' + i.text).join('\n');
-  shareText('רשימת קניות', text, 'הרשימה הועתקה, אפשר להדביק אותה בוואטסאפ');
-});
+const shopText = () => 'רשימת קניות:\n' + shop.filter((i) => !i.done).map((i) => '• ' + i.text).join('\n');
+$('#shop-share').addEventListener('click', () => shareText('רשימת קניות', shopText(), 'הרשימה הועתקה, אפשר להדביק אותה בוואטסאפ'));
+$('#shop-wa').addEventListener('click', () => { location.href = 'https://wa.me/?text=' + encodeURIComponent(shopText()); });
 
 let wakeLock = null;
 async function holdWake() { try { wakeLock = await navigator.wakeLock.request('screen'); } catch { toast('לא ניתן להשאיר את המסך דלוק'); } }
@@ -787,6 +798,7 @@ function fillCatSelect(selected) {
 function setImage(url) {
   draftImage = url || '';
   $('#img-prev').hidden = !draftImage;
+  $('#img-choose-t').textContent = draftImage ? 'החלפת תמונה' : 'הוספת תמונה';
   if (draftImage) { $('#img-el').src = draftImage; $('#img-el').referrerPolicy = 'no-referrer'; }
 }
 function renderEdit(id) {
@@ -807,6 +819,21 @@ function renderEdit(id) {
 }
 $('#img-el').addEventListener('error', () => setImage(''));
 $('#img-remove').addEventListener('click', () => setImage(''));
+// A photo from the phone is shrunk and kept inside the recipe, so it also shows offline and in backups.
+$('#img-choose').addEventListener('click', () => $('#img-file').click());
+$('#img-shoot').addEventListener('click', () => $('#img-cam').click());
+for (const id of ['#img-file', '#img-cam']) $(id).addEventListener('change', async (e) => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null);
+  if (!bmp) { toast('לא הצלחתי לפתוח את התמונה'); return; }
+  const k = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close?.();
+  setImage(c.toDataURL('image/jpeg', 0.72));
+});
 $('#f-cat').addEventListener('change', async (e) => {
   if (e.target.value !== '__new') return;
   const name = await ask('שם הקטגוריה החדשה:', { input: true, ok: 'הוספה' });
@@ -1523,7 +1550,16 @@ $('#install').addEventListener('click', async () => {
   if (!installEvt) return;
   installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; renderSettings();
 });
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// When a new version is uploaded, the phone picks it up and reloads once by itself.
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  const hadSw = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSw && !reloaded) { reloaded = true; location.reload(); } });
+}
 
 /* ---------- start (also handles "Share → מתכונים" from other apps) ---------- */
 (function start() {
